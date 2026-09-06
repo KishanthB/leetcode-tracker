@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href = "style.css">
+        <title>LeetCode Tracker</title>
+    </head>
+
+    <body>
+        <aside>
+            <h3>Your Lists</h3>
+            <ul>
+            <li>Solved Problems</li>
+            <li>Revisit Problems</li>
+            <li>To Solve Problems</li>
+            </ul>
+
+        </aside>
+        
+        <main>
+            <h3>Today's Problems!</h3>
+            <ul>
+                <li>Two Sum</li>
+                <li>Median to two sorted arrays</li>
+            </ul>
+            
+            <button id = "add-problem-btn">Add Problem</button>
+
+            <dialog id = "add-problem-modal">
+                <form>
+                    <label for="problem-name">Problem Name</label>
+                    <input type = "text" id = "problem-name" placeholder="problem name">
+
+                    <label for = "url">Enter Problem URL</label>
+                    <input type = "url" id = "url" placeholder="Enter the problem url">
+
+                    <label for = "date">Choose the Date to Revisit</label>
+                    <input type="date" id = "date">
+
+                    <label for = "difficulty">Diffiulty of the problem</label>
+                    <select id = "difficulty">
+                        <option>Easy</option>
+                        <option>Medium</option>
+                        <option>Hard</option>
+                    </select>
+                    <button>Add</button>
+                </form>
+                <button type = "button" id = "cancel-modal-btn">Cancel</button>
+            </dialog>
+        </main>
+        <script src = "script.js"></script>
+    </body>
+</html>
