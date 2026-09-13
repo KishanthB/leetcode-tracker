@@ -10,4 +10,4 @@ So far i've only built a basic frontend and started with backend
 
 1. HTML/CSS/JS
 2. Flask for backend
-3. SQLite for db
+3. PostgreSQL for db
