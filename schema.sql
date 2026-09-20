@@ -19,3 +19,7 @@ USING CASE WHEN problem_status THEN 'Solved' ELSE 'Unsolved' END::problem_status
 ALTER TABLE problems
 ALTER COLUMN problem_status
 SET DEFAULT 'Unsolved';
+
+ALTER TABLE problems
+ADD COLUMN revisit_date DATE,
+ADD COLUMN problem_url TEXT;
