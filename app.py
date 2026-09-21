@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
+from datetime import date, timedelta
 import psycopg2
 import os
 
@@ -19,9 +20,27 @@ def handle_problems():
     if (request.method == "POST"):
         new_problem = request.get_json()
 
+        revisit_date = new_problem.get("revisit_date")
+
+        if not revisit_date:
+            today = date.today()
+            difficulty = new_problem["problem_difficulty"]
+
+            if difficulty == "Easy": 
+                revisit_date = today + timedelta(days = 28)
+            elif difficulty == "Medium":
+                revisit_date = today + timedelta(days = 14)
+            else:
+                revisit_date = today + timedelta(days = 7)
+
         try:
-            cur.execute("INSERT INTO problems VALUES (%s, %s, %s, %s);", 
-                        (new_problem["problem_no"], new_problem["problem_name"], new_problem["problem_difficulty"], new_problem["problem_status"]))
+            cur.execute("INSERT INTO problems VALUES (%s, %s, %s, %s, %s, %s);", 
+                        (new_problem["problem_no"],
+                         new_problem["problem_name"], 
+                         new_problem["problem_difficulty"], 
+                         new_problem["problem_status"],
+                         revisit_date,
+                         new_problem["problem_url"]))
             conn.commit()
             return jsonify(new_problem), 201
         except psycopg2.errors.UniqueViolation:
@@ -37,7 +56,9 @@ def handle_problems():
                 "problem_no": row[0],
                 "problem_name": row[1],
                 "problem_difficulty": row[2],
-                "problem_status": row[3]
+                "problem_status": row[3],
+                "revisit_date": row[4],
+                "problem_url": row[5]
             }
             dict_problems.append(problem)
 
