@@ -20,6 +20,31 @@ def handle_problems():
     if (request.method == "POST"):
         new_problem = request.get_json()
 
+        #handling error cases for problem_no in database
+
+        if not "problem_no" in new_problem:
+            return jsonify({"error": "problem number can't be empty"}), 400
+        elif new_problem["problem_no"] < 1:
+            return jsonify({"error": "problem number can't be negative or zero"}), 400
+
+        #handling error cases for problem_name in database
+
+        if not "problem_name" in new_problem:
+            return jsonify({"error": "problem name can't be empty"}), 400
+
+        #handling error cases for problem_difficutly in database
+
+        if not "problem_difficulty" in new_problem:
+            return jsonify({"error": "problem difficulty can't be empty"}), 400
+        elif new_problem["problem_difficulty"] not in ("Easy", "Medium", "Hard"):
+            return jsonify({"error": "wrong type of difficulty"}), 400
+
+        #hard-coding problem status to be stricty "Solved" for current MVP
+
+        new_problem["problem_status"] = "Solved"
+        
+        #handling error cases for revisit date properly
+
         revisit_date = new_problem.get("revisit_date")
 
         if not revisit_date:
@@ -40,7 +65,7 @@ def handle_problems():
                          new_problem["problem_difficulty"], 
                          new_problem["problem_status"],
                          revisit_date,
-                         new_problem["problem_url"]))
+                         new_problem.get("problem_url")))
             conn.commit()
             return jsonify(new_problem), 201
         except psycopg2.errors.UniqueViolation:
