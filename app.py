@@ -8,8 +8,12 @@ load_dotenv()
 
 app = Flask(__name__)
 
-conn = psycopg2.connect(dbname = os.getenv("DB_NAME"), user = os.getenv("DB_USER"), password = os.getenv("DB_PASSWORD"), host = os.getenv("DB_HOST"), port = os.getenv("DB_PORT"))
-cur = conn.cursor()
+conn1 = psycopg2.connect(dbname = os.getenv("DB_NAME"), 
+                         user = os.getenv("DB_USER"), 
+                         password = os.getenv("DB_PASSWORD"), 
+                         host = os.getenv("DB_HOST"), 
+                         port = os.getenv("DB_PORT"))
+cur1 = conn1.cursor()
 
 @app.route('/')
 def home():
@@ -59,21 +63,21 @@ def handle_problems():
                 revisit_date = today + timedelta(days = 7)
 
         try:
-            cur.execute("INSERT INTO problems VALUES (%s, %s, %s, %s, %s, %s);", 
+            cur1.execute("INSERT INTO problems VALUES (%s, %s, %s, %s, %s, %s);", 
                         (new_problem["problem_no"],
                          new_problem["problem_name"], 
                          new_problem["problem_difficulty"], 
                          new_problem["problem_status"],
                          revisit_date,
                          new_problem.get("problem_url")))
-            conn.commit()
+            conn1.commit()
             return jsonify(new_problem), 201
         except psycopg2.errors.UniqueViolation:
-            conn.rollback()
+            conn1.rollback()
             return jsonify({"error": "problem_no already exists"}), 409
     else:
-        cur.execute('SELECT * FROM problems;')
-        rows = cur.fetchall()
+        cur1.execute('SELECT * FROM problems;')
+        rows = cur1.fetchall()
         dict_problems = []
 
         for row in rows:
@@ -88,6 +92,34 @@ def handle_problems():
             dict_problems.append(problem)
 
         return jsonify(dict_problems)
+
+
+# creating a new API route
+
+dailyCap = 1
+@app.route("/api/problems/due")
+def due_problems():
+
+    cur1.execute("SELECT * FROM problems WHERE revisit_date <= CURRENT_DATE ORDER BY revisit_date ASC LIMIT %s;", (dailyCap,))
+    allDueProblems = cur1.fetchall()
+
+    todayProblems = []
+    for problem in allDueProblems:
+        # i can hardoce since im the one who create the DB
+        # but i should learn how to do this when i don't know that or if there is a better way
+
+        # i don't wanna add "original revisit_date" since that wil demotivate me seeing problems from
+        # months doesn't got solved "yet" so imma skip it
+        dueProblem = {
+            "problem_no": problem[0],
+            "problem_name": problem[1],
+            "problem_difficulty": problem[2],
+            "problem_url": problem[5]
+        }
+
+        todayProblems.append(dueProblem)
+    
+    return jsonify(todayProblems), 200
 
 if __name__ == '__main__':
     app.run(debug = True)
