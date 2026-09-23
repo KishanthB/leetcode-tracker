@@ -23,3 +23,14 @@ SET DEFAULT 'Unsolved';
 ALTER TABLE problems
 ADD COLUMN revisit_date DATE,
 ADD COLUMN problem_url TEXT;
+
+CREATE TABLE tags(
+    tag_id SERIAL PRIMARY KEY,
+    tag_name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE problem_tags(
+    problem_no INTEGER REFERENCES problems(problem_no) ON DELETE CASCADE,
+    tag_id INTEGER REFERENCES tags(tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (problem_no, tag_id)
+);
