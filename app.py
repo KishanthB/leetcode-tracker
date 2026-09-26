@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 from datetime import date, timedelta
 import psycopg2
+import json
 import os
 
 load_dotenv()
@@ -22,7 +23,11 @@ def home():
 @app.route('/api/problems', methods = ["GET", "POST"])
 def handle_problems():
     if (request.method == "POST"):
-        new_problem = request.get_json()
+        new_problem = request.get_json(silent = True)
+
+        #checking whether data even came or not
+        if new_problem is None:
+            return jsonify({"error": "request body must be valid JSON"}), 400
 
         #handling error cases for problem_no in database
 
@@ -105,7 +110,7 @@ def due_problems():
 
     todayProblems = []
     for problem in allDueProblems:
-        # i can hardoce since im the one who create the DB
+        # i can hardcode since im the one who create the DB
         # but i should learn how to do this when i don't know that or if there is a better way
 
         # i don't wanna add "original revisit_date" since that wil demotivate me seeing problems from
