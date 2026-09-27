@@ -67,6 +67,8 @@ def handle_problems():
             else:
                 revisit_date = today + timedelta(days = 7)
 
+        new_problem["revisit_date"] = revisit_date
+
         try:
             cur1.execute("INSERT INTO problems VALUES (%s, %s, %s, %s, %s, %s);", 
                         (new_problem["problem_no"],
