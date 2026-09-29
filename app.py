@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from flask.json.provider import DefaultJSONProvider
 from dotenv import load_dotenv
 from datetime import date, timedelta
 import psycopg2
@@ -7,7 +8,17 @@ import os
 
 load_dotenv()
 
+class CustomJSONProvider(DefaultJSONProvider):
+
+    @staticmethod
+    def default(o):
+        if isinstance(o, date):
+            return o.isoformat()
+        return DefaultJSONProvider.default(o)
+
 app = Flask(__name__)
+
+app.json = CustomJSONProvider(app)
 
 conn1 = psycopg2.connect(dbname = os.getenv("DB_NAME"), 
                          user = os.getenv("DB_USER"), 
