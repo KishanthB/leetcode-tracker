@@ -16,6 +16,13 @@ class CustomJSONProvider(DefaultJSONProvider):
             return o.isoformat()
         return DefaultJSONProvider.default(o)
 
+DAILY_CAP = 1
+BASE_GAPS = {
+    "HARD": 7,
+    "MEDIUM": 14,
+    "EASY": 28
+}
+
 app = Flask(__name__)
 
 app.json = CustomJSONProvider(app)
@@ -78,12 +85,7 @@ def handle_problems():
             today = date.today()
             difficulty = new_problem["problem_difficulty"]
 
-            if difficulty == "Easy": 
-                revisit_date = today + timedelta(days = 28)
-            elif difficulty == "Medium":
-                revisit_date = today + timedelta(days = 14)
-            else:
-                revisit_date = today + timedelta(days = 7)
+            revisit_date = today + timedelta(days = BASE_GAPS[difficulty.upper()])
 
         new_problem["revisit_date"] = revisit_date
 
@@ -135,7 +137,6 @@ def handle_problems():
 
 # creating a new API route
 
-dailyCap = 1
 @app.route("/api/problems/due")
 def due_problems():
 
@@ -144,7 +145,7 @@ def due_problems():
     try:
         cur = conn.cursor()
 
-        cur.execute("SELECT * FROM problems WHERE revisit_date <= CURRENT_DATE ORDER BY revisit_date ASC LIMIT %s;", (dailyCap,))
+        cur.execute("SELECT * FROM problems WHERE revisit_date <= CURRENT_DATE ORDER BY revisit_date ASC LIMIT %s;", (DAILY_CAP,))
         allDueProblems = cur.fetchall()
 
         todayProblems = []
@@ -165,6 +166,63 @@ def due_problems():
         
         return jsonify(todayProblems), 200
 
+    finally:
+        conn.close()
+
+@app.route("/api/problems/<int:problem_no>", methods = ["PATCH"])
+def revise_problem(problem_no):
+
+    body = request.get_json(silent = True) or {}
+
+    if not isinstance(body, dict):
+        return jsonify({"error": "Bad Request, need JSON"}), 400
+
+    if "remove_from_cycle" in body and not isinstance(body["remove_from_cycle"], bool):
+        return jsonify({"error": "Bad Request, remove from cycle should be a boolean"}), 400
+
+    if "revisit_date" in body:
+        try:
+            revisit_date = date.fromisoformat(body["revisit_date"])
+        except (ValueError, TypeError):
+            return jsonify({"error": f"{body["revisit_date"]} is an Invalid date"}), 400
+
+    conn = get_connection()
+
+    try:
+        cur = conn.cursor()
+
+        cur.execute("SELECT problem_difficulty, revisit_count FROM problems WHERE problem_no = %s;", (problem_no, ))
+        data = cur.fetchall()
+
+        if not data: return jsonify({"error": f"can't find the problem no '{problem_no}'"}), 404
+
+        problem_difficulty = data[0][0]
+        revisit_count = data[0][1]
+
+        if body.get("remove_from_cycle") is True: 
+            cur.execute("UPDATE problems SET revisit_date = NULL WHERE problem_no = %s;", (problem_no, ))
+            conn.commit()
+            return jsonify({"success": f"successfully removed the problem no: {problem_no} from revision cycle", 
+                            "revisit_count": revisit_count}), 200
+        else:
+            revisit_count += 1
+
+        if "revisit_date" in body:   
+            cur.execute("UPDATE problems SET revisit_date = %s, revisit_count = %s WHERE problem_no = %s;", (revisit_date, revisit_count, problem_no))
+            conn.commit()
+            return jsonify({"success": f"successfully set the new revisit date for the problem no: {problem_no}", 
+                            "revisit_date": f"{revisit_date}", 
+                            "revisit_count": revisit_count}), 200
+
+        #manual updation for revisit_date
+        revisit_date = date.today() + timedelta(days = BASE_GAPS[problem_difficulty.upper()] * (2 ** revisit_count))
+
+        cur.execute("UPDATE problems SET revisit_date = %s, revisit_count = %s WHERE problem_no = %s;", (revisit_date, revisit_count, problem_no))
+        conn.commit()
+        return jsonify({"success": f"successfully set the new revisit date for the problem no: {problem_no}",
+                       "revisit_date": f"{revisit_date}",
+                       "revisit_count": revisit_count}), 200
+        
     finally:
         conn.close()
 
