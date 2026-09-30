@@ -34,3 +34,6 @@ CREATE TABLE problem_tags(
     tag_id INTEGER REFERENCES tags(tag_id) ON DELETE CASCADE,
     PRIMARY KEY (problem_no, tag_id)
 );
+
+ALTER TABLE problems
+ADD COLUMN revisit_counts INTEGER NOT NULL DEFAULT 0;
