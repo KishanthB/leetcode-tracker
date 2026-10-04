@@ -17,6 +17,7 @@ class CustomJSONProvider(DefaultJSONProvider):
         return DefaultJSONProvider.default(o)
 
 DAILY_CAP = 1
+MAX_GAP = 90
 BASE_GAPS = {
     "HARD": 7,
     "MEDIUM": 14,
@@ -27,19 +28,29 @@ app = Flask(__name__)
 
 app.json = CustomJSONProvider(app)
 
-conn1 = psycopg2.connect(dbname = os.getenv("DB_NAME"), 
-                         user = os.getenv("DB_USER"), 
-                         password = os.getenv("DB_PASSWORD"), 
-                         host = os.getenv("DB_HOST"), 
-                         port = os.getenv("DB_PORT"))
-cur1 = conn1.cursor()
-
 def get_connection():
     return psycopg2.connect(dbname = os.getenv("DB_NAME"), 
                             user = os.getenv("DB_USER"), 
                             password = os.getenv("DB_PASSWORD"), 
                             host = os.getenv("DB_HOST"), 
                             port = os.getenv("DB_PORT"))
+
+def compute_revisit_date(difficulty, count = 0):
+    return date.today() + timedelta(days = min(BASE_GAPS[difficulty.upper()] * (2 ** count), MAX_GAP))
+
+def parse_revisit_date(revisit_date):
+    if isinstance(revisit_date, str):
+        try:
+            revisit_date = date.fromisoformat(revisit_date)
+        except ValueError:
+            raise ValueError("Invalid Date")
+    else:
+        raise ValueError("revisit date needs to be a string")
+
+    if revisit_date <= date.today():
+        raise ValueError("revisit date needs to be in the future")
+
+    return revisit_date
 
 @app.route('/')
 def home():
@@ -78,14 +89,13 @@ def handle_problems():
         new_problem["problem_status"] = "Solved"
         
         #handling error cases for revisit date properly
-
-        revisit_date = new_problem.get("revisit_date")
-
-        if not revisit_date:
-            today = date.today()
-            difficulty = new_problem["problem_difficulty"]
-
-            revisit_date = today + timedelta(days = BASE_GAPS[difficulty.upper()])
+        if "revisit_date" in new_problem:
+            try:
+                revisit_date = parse_revisit_date(new_problem["revisit_date"])
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+        else:
+            revisit_date = compute_revisit_date(new_problem["problem_difficulty"])
 
         new_problem["revisit_date"] = revisit_date
 
@@ -94,7 +104,17 @@ def handle_problems():
         try:
             cur = conn.cursor()
 
-            cur.execute("INSERT INTO problems VALUES (%s, %s, %s, %s, %s, %s);", 
+            cur.execute("""
+                INSERT INTO problems (
+                         problem_no,
+                         problem_name,
+                         problem_difficulty,
+                         problem_status,
+                         revisit_date,
+                         problem_url
+                        )
+                         VALUES (%s, %s, %s, %s, %s, %s);
+                        """, 
                         (new_problem["problem_no"],
                          new_problem["problem_name"], 
                          new_problem["problem_difficulty"], 
@@ -145,7 +165,10 @@ def due_problems():
     try:
         cur = conn.cursor()
 
-        cur.execute("SELECT * FROM problems WHERE revisit_date <= CURRENT_DATE ORDER BY revisit_date ASC LIMIT %s;", (DAILY_CAP,))
+        cur.execute("""
+        SELECT problem_no, problem_name, problem_difficulty, problem_url 
+        FROM problems WHERE revisit_date <= CURRENT_DATE ORDER BY revisit_date ASC LIMIT %s;
+        """, (DAILY_CAP,))
         allDueProblems = cur.fetchall()
 
         todayProblems = []
@@ -159,7 +182,7 @@ def due_problems():
                 "problem_no": problem[0],
                 "problem_name": problem[1],
                 "problem_difficulty": problem[2],
-                "problem_url": problem[5]
+                "problem_url": problem[3]
             }
 
             todayProblems.append(dueProblem)
@@ -172,7 +195,13 @@ def due_problems():
 @app.route("/api/problems/<int:problem_no>", methods = ["PATCH"])
 def revise_problem(problem_no):
 
-    body = request.get_json(silent = True) or {}
+    if not request.is_json:
+        return jsonify({"error": "Invalid Header, Please check the content type"}), 415
+
+    body = request.get_json(silent = True)
+
+    if body is None:
+        return jsonify({"error": "Bad Request, Invalid JSON body"}), 400
 
     if not isinstance(body, dict):
         return jsonify({"error": "Bad Request, need JSON"}), 400
@@ -182,46 +211,49 @@ def revise_problem(problem_no):
 
     if "revisit_date" in body:
         try:
-            revisit_date = date.fromisoformat(body["revisit_date"])
-        except (ValueError, TypeError):
-            return jsonify({"error": f"{body["revisit_date"]} is an Invalid date"}), 400
+            revisit_date = parse_revisit_date(body["revisit_date"])
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     conn = get_connection()
 
     try:
         cur = conn.cursor()
 
-        cur.execute("SELECT problem_difficulty, revisit_count FROM problems WHERE problem_no = %s;", (problem_no, ))
-        data = cur.fetchall()
-
-        if not data: return jsonify({"error": f"can't find the problem no '{problem_no}'"}), 404
-
-        problem_difficulty = data[0][0]
-        revisit_count = data[0][1]
-
-        if body.get("remove_from_cycle") is True: 
-            cur.execute("UPDATE problems SET revisit_date = NULL WHERE problem_no = %s;", (problem_no, ))
+        if body.get("remove_from_cycle") is True:
+            cur.execute("""
+                    UPDATE problems SET revisit_date = NULL
+                    WHERE problem_no = %s
+                    RETURNING revisit_count;""", (problem_no, ))
+            row = cur.fetchone()
             conn.commit()
-            return jsonify({"success": f"successfully removed the problem no: {problem_no} from revision cycle", 
-                            "revisit_count": revisit_count}), 200
-        else:
-            revisit_count += 1
 
-        if "revisit_date" in body:   
-            cur.execute("UPDATE problems SET revisit_date = %s, revisit_count = %s WHERE problem_no = %s;", (revisit_date, revisit_count, problem_no))
-            conn.commit()
-            return jsonify({"success": f"successfully set the new revisit date for the problem no: {problem_no}", 
-                            "revisit_date": f"{revisit_date}", 
-                            "revisit_count": revisit_count}), 200
+            if row is None:
+                return jsonify({"error": f"can't find the problem no '{problem_no}'"}), 404
 
-        #manual updation for revisit_date
-        revisit_date = date.today() + timedelta(days = BASE_GAPS[problem_difficulty.upper()] * (2 ** revisit_count))
+            revisit_count = row[0]
+            return jsonify({"success": f"problem no '{problem_no}' is successfully removed from the revisit cycle, revisit counts: {revisit_count}"}), 200
 
-        cur.execute("UPDATE problems SET revisit_date = %s, revisit_count = %s WHERE problem_no = %s;", (revisit_date, revisit_count, problem_no))
+        cur.execute("""
+                UPDATE problems SET revisit_count = revisit_count + 1
+                WHERE problem_no = %s
+                RETURNING problem_difficulty, revisit_count;""", (problem_no, ))
+        row = cur.fetchone()
+
+        if row is None:
+            return jsonify({"error": f"can't find the problem no '{problem_no}'"}), 404
+
+        difficulty, revisit_count = row
+
+        if "revisit_date" not in body:
+            revisit_date = compute_revisit_date(difficulty, revisit_count)
+
+        cur.execute("""
+                UPDATE problems SET revisit_date = %s
+                WHERE problem_no = %s;""", (revisit_date, problem_no))
         conn.commit()
-        return jsonify({"success": f"successfully set the new revisit date for the problem no: {problem_no}",
-                       "revisit_date": f"{revisit_date}",
-                       "revisit_count": revisit_count}), 200
+        
+        return jsonify({"success": f"problem no '{problem_no}' is successfully set to revisit on date: '{revisit_date}', current revisit counts: {revisit_count}"}), 200      
         
     finally:
         conn.close()
