@@ -1,7 +1,26 @@
 .card {
     display: flex;
     background-color: blanchedalmond;
-    border: 3px solid red;
+    border: 3px solid black;
     padding: 10px;
     margin: 10px;
+}
+
+.easy {
+    color: white;
+    background-color: lightgreen;
+}
+
+.medium {
+    color: white;
+    background-color: lightyellow;
+}
+
+.hard {
+    color: white;
+    background-color: tomato;
+}
+
+body {
+    background-color: aliceblue;
 }

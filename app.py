@@ -24,7 +24,7 @@ BASE_GAPS = {
     "EASY": 28
 }
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="frontend", static_url_path="")
 
 app.json = CustomJSONProvider(app)
 
@@ -54,7 +54,7 @@ def parse_revisit_date(revisit_date):
 
 @app.route('/')
 def home():
-    return "Welcome to my tracker!"
+    return app.send_static_file("index.html")
 
 @app.route('/api/problems', methods = ["GET", "POST"])
 def handle_problems():
