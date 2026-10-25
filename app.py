@@ -3,7 +3,6 @@ from flask.json.provider import DefaultJSONProvider
 from dotenv import load_dotenv
 from datetime import date, timedelta
 import psycopg2
-import json
 import os
 
 load_dotenv()
@@ -52,9 +51,81 @@ def parse_revisit_date(revisit_date):
 
     return revisit_date
 
+#only when the "problem" tuple is the entire row from the database 
+def build_problem_dict(problem):
+    problem_dict = {
+        "problem_no": problem[0],
+        "problem_name": problem[1],
+        "problem_difficutly": problem[2],
+        "problem_status": problem[3],
+        "revisit_date": problem[4],
+        "problem_url": problem[5],
+        "revisit_count": problem[6]
+    }
+    return problem_dict
+
 @app.route('/')
 def home():
     return app.send_static_file("index.html")
+
+@app.route('/api/problem/search', methods = ["GET"])
+def search_problems():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        
+        raw_q = request.args.get("q", "").strip()
+
+        if not raw_q:
+            return jsonify({
+                "error": "Bad Request",
+                "message": "search query cannot be empty or just whitespaces."
+            }), 400
+
+        if raw_q.isdigit():
+            if int(raw_q) <= 0:
+                return jsonify({
+                    "error": "Bad Request",
+                    "message": "problem number cannot be negative or zero"
+                }), 400
+            else:
+                q = int(raw_q)
+        else:
+            q = raw_q
+
+        if isinstance(q, int):
+            cur.execute("""
+                        SELECT * FROM problems
+                        WHERE problem_no = %s""", (q, ))
+            match = cur.fetchone()
+
+            if match is None:
+                return jsonify({
+                    "error": "No Match Found",
+                    "message": f"No Problem with the id no: {q}. want to add this problem to the database?"
+                }), 404
+            else:
+                problem_dict = build_problem_dict(match)
+                return jsonify(problem_dict), 200
+            
+        else:
+            search_term = f"%{q}%"
+            cur.execute("""
+                        SELECT * FROM problems
+                        WHERE problem_name ILIKE %s""", (search_term, ))
+            matches = cur.fetchall()
+
+            if not matches:
+                return jsonify({
+                    "error": "No Match Found",
+                    "message": f"No Problem with the name: {q}. want to add this problem to the database?"
+                }), 404
+            else:
+                all_matches = [build_problem_dict(problem) for problem in matches]
+                return jsonify(all_matches), 200
+
+    finally:
+        conn.close()
 
 @app.route('/api/problems', methods = ["GET", "POST"])
 def handle_problems():
