@@ -1,3 +1,10 @@
+//gloabal variables
+let dialog = null;
+let currentBtn = null;
+let currentProblemNo = null;
+let revisit_date_element = null;
+let remove_from_cycle_element = null;
+
 async function getDueProblems() {
     try {
         const response = await fetch("/api/problems/due");
@@ -8,6 +15,7 @@ async function getDueProblems() {
         showMessage(error.message);
     }
 }
+
 //add the route or url parameter if patching on multiple routes
 async function updateProblem(problemNo, patchOjbect) {
     try {
@@ -29,14 +37,13 @@ async function updateProblem(problemNo, patchOjbect) {
             showMessage(result.success || "update successful!");
         }
 
-    } catch(error) {
-        showMessage(error.message || "a network error occurred");
+    } finally {
+        if (currentBtn) currentBtn.disabled = false;
     }
 }
 
 function checkChildExistence(parent, child) {
-    if (parent.querySelector("child") !== null) return true;
-    else return false; 
+    return parent.querySelector(child) !== null;
 }
 
 function showMessage(message) {
@@ -50,16 +57,18 @@ function renderDueProblems(problems) {
         showMessage("No Problems Today! Good Job");
         return;
     }
+
+    let title;
     const list = document.querySelector("#problem-list");
+    revisit_date_element = document.getElementById("revisit_date");
+    remove_from_cycle_element = document.getElementById("remove_from_cycle");
+
     for (const problem of problems) {
         const li = document.createElement("li");
         const card = document.createElement("div");
         const difficulty = document.createElement("span");
         const button = document.createElement("button");
-        const dialog = document.getElementById("revision-dialog");
-        const revisit_date_element = document.getElementById("revisit_date");
-        const remove_from_cycle_element = document.getElementById("remove_from_cycle");
-        let title;
+        dialog = document.getElementById("revision-dialog");
         
         if (problem.problem_url === null) {
             title = document.createElement("span");
@@ -85,6 +94,8 @@ function renderDueProblems(problems) {
         
         button.addEventListener("click", async() => {
             button.disabled = true;
+            currentBtn = button;
+            currentProblemNo = problem.problem_no;
             dialog.showModal();
         });
     }
@@ -100,26 +111,25 @@ function renderDueProblems(problems) {
     });
 
     const confirm_revision = document.getElementById("confirm-revision");
-        confirm_revision.addEventListener("click", () => {
+    confirm_revision.addEventListener("click", async () => {
         const finalDate = revisit_date_element.value;
         const finalCheckSate = remove_from_cycle_element.checked;
 
         let patchOjbect;
                 
         if (finalDate === "" && finalCheckSate === false) {
-            patchOjbect = {};
+            patchOjbect = {}; // my flask server is made to handle this as user wants to allow the server to calculate the next revisit date
         } else if (finalDate !== "" && finalCheckSate === false) {
-            patchOjbect = {reivsit_date: finalDate};
+            patchOjbect = {revisit_date: finalDate};
         } else {
             patchOjbect = {remove_from_cycle: finalCheckSate};
         }
-
-        updateProblem(problem.problem_no, patchOjbect).catch(err => {
-            console.error(err);
-        });
-
-        dialog.close();
-
+        try {
+            await updateProblem(currentProblemNo, patchOjbect);
+            dialog.close();
+        } catch(error) {
+            showMessage(error.message);
+        }
     });
 
     const cancel_revision = document.getElementById("cancel-revision");
@@ -129,6 +139,8 @@ function renderDueProblems(problems) {
 
         revisit_date_element.disabled = false;
         remove_from_cycle_element.disabled = false;
+
+        if (currentBtn) currentBtn.disabled = false;
 
         dialog.close();
     });
