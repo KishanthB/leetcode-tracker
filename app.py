@@ -68,7 +68,7 @@ def build_problem_dict(problem):
 def home():
     return app.send_static_file("index.html")
 
-@app.route('/api/problem/search', methods = ["GET"])
+@app.route('/api/problems/search', methods = ["GET"])
 def search_problems():
     conn = get_connection()
     try:
@@ -100,13 +100,10 @@ def search_problems():
             match = cur.fetchone()
 
             if match is None:
-                return jsonify({
-                    "error": "No Match Found",
-                    "message": f"No Problem with the id no: {q}. want to add this problem to the database?"
-                }), 404
+                return jsonify([]), 200
             else:
                 problem_dict = build_problem_dict(match)
-                return jsonify(problem_dict), 200
+                return jsonify([problem_dict]), 200
             
         else:
             search_term = f"%{q}%"
@@ -116,10 +113,7 @@ def search_problems():
             matches = cur.fetchall()
 
             if not matches:
-                return jsonify({
-                    "error": "No Match Found",
-                    "message": f"No Problem with the name: {q}. want to add this problem to the database?"
-                }), 404
+                return jsonify([]), 200
             else:
                 all_matches = [build_problem_dict(problem) for problem in matches]
                 return jsonify(all_matches), 200

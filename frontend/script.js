@@ -5,6 +5,10 @@ let currentProblemNo = null;
 let revisit_date_element = null;
 let remove_from_cycle_element = null;
 
+function isDigit(str) {
+    return /^[1-9]\d+$/.test(str);
+}
+
 async function getDueProblems() {
     try {
         const response = await fetch("/api/problems/due");
@@ -147,4 +151,63 @@ function renderDueProblems(problems) {
 
 }
 
+//getting daily due problems
 getDueProblems();
+
+//when search button is clicked
+const searchBtn = document.getElementById("search_btn");
+searchBtn.addEventListener("click", async () => {
+    currentBtn = searchBtn;
+    currentBtn.disabled = true;
+    const input = document.getElementById("search_input");
+    getSearchProblems(input.value);
+});
+
+//to get search problems
+async function getSearchProblems(searchInput) {
+    try {
+        const safeInput = encodeURIComponent(searchInput);
+        const response = await fetch(`/api/problems/search?q=${safeInput}`);
+
+        let result;
+
+        if (!response.ok) {
+            result = await response.json();
+            throw new Error(result.message || "something went wrong");
+        } else {
+            result = await response.json();
+            renderSearchProblems(result);
+        }
+    }
+
+    finally {
+        if (currentBtn) currentBtn.disabled = false;
+    }
+}
+
+function renderSearchProblems(problems) {
+    const resultContainer = document.querySelector(".search_results");
+    resultContainer.replaceChildren();
+
+    if (problems.length == 0) {
+        const message = "No Problems were found";
+        resultContainer.append(message);
+        return;
+    } 
+
+    for (const problem of problems) {
+        const problemBtn = document.createElement("button");
+        const problem_title = document.createElement("span");
+        
+        problemBtn.type = "button";
+        problem_title.textContent = `${problem.problem_no}. ${problem.problem_name}`;
+        
+        problemBtn.append(problem_title);
+        resultContainer.append(problemBtn);
+
+        problemBtn.addEventListener("click", async () => {
+
+        });
+    }
+
+}
