@@ -185,6 +185,40 @@ async function getSearchProblems(searchInput) {
     }
 }
 
+function openProblemDialog(problem) {
+    const container = document.querySelector(".search-problem-dialog");
+    container.showModal();
+    const problemNo = document.querySelector("#search-problem-no");
+    const problemName = document.querySelector("#search-problem-name");
+    const problemDiff = document.querySelector("#search-problem-difficulty");
+    const problemURL = document.querySelector("#search-problem-url");
+    const problemRevisitCount = document.querySelector("#search-revisit-count");
+    const problemRevisitDate = document.querySelector("#search-revisit-date");
+    const problemRevisitMsg = document.querySelector("#search-revisit-message");
+    const problemRmvCheckBox = document.querySelector("#search-remove-from-cycle")
+    const problemRmvFrmCycleMsg = document.querySelector("#remove-from-cycle-message");
+
+    problemNo.querySelector("span").textContent = problem.problem_no;
+    problemName.querySelector("span").textContent = problem.problem_name;
+    problemDiff.querySelector("span").textContent = problem.problem_difficulty;
+    problemURL.querySelector("span a").href = problem.problem_url;
+    problemRevisitCount.querySelector("span").textContent = problem.revisit_count;
+
+    if (problem.revisit_date === null) {
+        problemRevisitDate.value = "";
+        problemRevisitMsg.textContent = "No revisit date";
+        problemRmvCheckBox.disabled = true;
+        problemRmvFrmCycleMsg.textContent = "Already removed";
+    } else {
+        problemRevisitDate.value = problem.revisit_date;
+        problemRevisitMsg.textContent = "";
+        problemRmvCheckBox.disabled = false;
+        problemRmvCheckBox.checked = true;
+    }
+
+
+}
+
 function renderSearchProblems(problems) {
     const resultContainer = document.querySelector(".search_results");
     resultContainer.replaceChildren();
@@ -206,6 +240,7 @@ function renderSearchProblems(problems) {
         resultContainer.append(problemBtn);
 
         problemBtn.addEventListener("click", async () => {
+            openProblemDialog(problem);
 
         });
     }

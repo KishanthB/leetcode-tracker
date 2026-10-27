@@ -38,5 +38,28 @@
 
             </div>
         </div>
+
+        <dialog class="search-problem-dialog">
+            <p id="search-problem-no">Problem No: <span></span></p>
+            <p id="search-problem-name">Problem Name: <span></span></p>
+            <p id="search-problem-difficulty">Problem Difficulty: <span></span></p>
+            <p id="search-problem-url">Problem URL: <span><a target="_blank"></a></span></p>
+            <p id="search-revisit-count">Revisit Counts: <span></span></p>
+
+            <label for="search-revisit-date">Revisit date: </label>
+            <input type="date" id="search-revisit-date">
+            <p id="search-revisit-message"></p>
+
+            <label for="search-remove-from-cycle">
+                <input type="checkbox" id="search-remove-from-cycle">
+                Remove From Cycle
+            </label>
+            <p id="remove-from-cycle-message"></p>
+
+            <div class="confirm-or-cancel">
+                <button id="confirm">Confirm</button>
+                <button id="Cancel">Cancel</button>
+            </div>
+        </dialog>
     </body>
 </html>

@@ -56,7 +56,7 @@ def build_problem_dict(problem):
     problem_dict = {
         "problem_no": problem[0],
         "problem_name": problem[1],
-        "problem_difficutly": problem[2],
+        "problem_difficulty": problem[2],
         "problem_status": problem[3],
         "revisit_date": problem[4],
         "problem_url": problem[5],
