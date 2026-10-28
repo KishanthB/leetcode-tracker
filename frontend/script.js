@@ -185,8 +185,11 @@ async function getSearchProblems(searchInput) {
     }
 }
 
+const dialogConfirmBtn = document.querySelector("#search-confirm");
+const dialogCancelBtn = document.querySelector("#search-cancel");
+const container = document.querySelector(".search-problem-dialog");
+
 function openProblemDialog(problem) {
-    const container = document.querySelector(".search-problem-dialog");
     container.showModal();
     const problemNo = document.querySelector("#search-problem-no");
     const problemName = document.querySelector("#search-problem-name");
@@ -197,6 +200,8 @@ function openProblemDialog(problem) {
     const problemRevisitMsg = document.querySelector("#search-revisit-message");
     const problemRmvCheckBox = document.querySelector("#search-remove-from-cycle")
     const problemRmvFrmCycleMsg = document.querySelector("#remove-from-cycle-message");
+
+    currentProblemNo = problem.problem_no;
 
     problemNo.querySelector("span").textContent = problem.problem_no;
     problemName.querySelector("span").textContent = problem.problem_name;
@@ -213,11 +218,28 @@ function openProblemDialog(problem) {
         problemRevisitDate.value = problem.revisit_date;
         problemRevisitMsg.textContent = "";
         problemRmvCheckBox.disabled = false;
-        problemRmvCheckBox.checked = true;
     }
 
-
+    problemRmvCheckBox.checked = false;
 }
+
+dialogConfirmBtn.addEventListener("click", async () => {
+    const finalRevisitDate = problemRevisitDate.value;
+    const finalCheckBoxState = problemRmvCheckBox.checked;
+
+    const patchOjbect = {
+        revisit_date: finalRevisitDate,
+        remove_from_cycle: finalCheckBoxState
+    };
+
+    await updateProblem(currentProblemNo, patchOjbect);
+
+    container.close();
+});
+
+dialogCancelBtn.addEventListener("click", async () => {
+    container.close();
+});
 
 function renderSearchProblems(problems) {
     const resultContainer = document.querySelector(".search_results");
