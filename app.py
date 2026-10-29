@@ -274,6 +274,11 @@ def revise_problem(problem_no):
     if "remove_from_cycle" in body and not isinstance(body["remove_from_cycle"], bool):
         return jsonify({"error": "Bad Request, remove from cycle should be a boolean"}), 400
 
+    if "remove_from_cycle" in body and "revisit_date" in body:
+        return jsonify({
+            "message": "Bad Requesy, cannot set the revisite date while also removing it from the revision cycle"
+        }), 400
+
     if "revisit_date" in body:
         try:
             revisit_date = parse_revisit_date(body["revisit_date"])
