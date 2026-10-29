@@ -61,5 +61,39 @@
                 <button id="search-cancel">Cancel</button>
             </div>
         </dialog>
+
+        <div class="add-new-problem">
+            <label for="add-btn">Add New Problem: </label>
+            <button id="add-btn">Add New +</button>
+        </div>
+
+        <dialog class="add-problem-dialog">
+
+            <label for="new-problem-no">Problem No: </label>
+            <input type="number" id="new-problem-no" required>
+
+            <label for="new-problem-name">Problem Name: </label>
+            <input type="text" id="new-problem-name" required>
+
+            <label for="new-problem-difficulty">Problem Difficulty: </label>
+            <select id="new-problem-difficulty">
+                <option>Easy</option>
+                <option selected>Medium</option>
+                <option>Hard</option>
+            </select>
+
+            <label for="new-problem-status">Problem Status: </label>
+            <select id="new-problem-status">
+                <option selected>Solved</option>
+                <option>Unsolved</option>
+                <option>Attempted</option>
+            </select>
+
+            <label for="new-problem-url">Problem URL: </label>
+            <input type="text" id="new-problem-url">
+
+            <label for="new-problem-revisit-date"></label>
+            <input type="date" id="new-problem-revisit-date">
+        </dialog>
     </body>
 </html>
