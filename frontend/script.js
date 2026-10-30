@@ -278,3 +278,113 @@ function renderSearchProblems(problems) {
     }
 
 }
+
+//add new problem 
+const addNewBtn = document.querySelector("#add-btn");
+const newProblemContainer = document.querySelector(".add-problem-dialog");
+
+addNewBtn.addEventListener("click", () => {
+    newProblemContainer.showModal();
+});
+
+const newProblemConfirm = document.querySelector("#add-confirm");
+newProblemConfirm.addEventListener("click", async () => {
+    const problemData = getNewProblemData();
+
+    if (!problemData) return;
+
+    await addNewProblem(problemData);
+});
+
+const newProblemCancel = document.querySelector("#add-cancel");
+newProblemCancel.addEventListener("click", () => {
+    newProblemNo.value = "";
+    newProblemName.value = "";
+    newProblemDifficulty.value = "";
+    newProblemStatus.value = "";
+    newProblemURL.value = "";
+    newRevisitDate.value = "";
+
+    newProblemContainer.close();
+});
+
+const newProblemNo = document.querySelector("#new-problem-no");
+const newProblemName = document.querySelector("#new-problem-name");
+const newProblemDifficulty = document.querySelector("#new-problem-difficulty");
+const newProblemStatus = document.querySelector("#new-problem-status");
+const newProblemURL = document.querySelector("#new-problem-url");
+const newRevisitDate = document.querySelector("#new-problem-revisit-date");
+
+
+//to get new problem data 
+function getNewProblemData() {
+    const finalNewProbNo = newProblemNo.value;
+    const finalNewProbName = newProblemName.value;
+    const finalNewProbDiff = newProblemDifficulty.value;
+    const finalNewProbStatus = newProblemStatus.value;
+    const finalNewProbURL = newProblemURL.value;
+    const finalNewProbDate = newRevisitDate.value;
+
+    let msg;
+
+    if (!isDigit(finalNewProbNo)) {
+        msg = {
+            message: "problem no should be a valid number starting from 1"
+        };
+        showMessage(msg);
+        return;
+    }
+
+    if (!finalNewProbName) {
+        msg = {
+            message: "problem name cannot be empty"
+        };
+        showMessage(msg);
+        return;
+    }
+
+    const problemData = {
+        problem_no: finalNewProbNo,
+        problem_name: finalNewProbName,
+        problem_difficulty: finalNewProbDiff,
+        problem_status: finalNewProbStatus,
+        problem_url: finalNewProbURL,
+        revisit_date: finalNewProbDate
+    };
+
+    return problemData;
+}
+
+//to add new problem to the database
+async function addNewProblem(problemData) {
+    try {
+        const response = await fetch("/api/problems", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(problemData)
+        });
+
+        const data = await response.json();
+
+        showMessage(data);
+
+        if (!response.ok) return;
+
+        newProblemNo.value = "";
+        newProblemName.value = "";
+        newProblemDifficulty.value = "";
+        newProblemStatus.value = "";
+        newProblemURL.value = "";
+        newRevisitDate.value = "";
+
+        newProblemContainer.close();
+
+    } catch {
+        let msg = {
+            message: "Unnable to connect to the server"
+        };
+        showMessage(msg);
+    }
+}
