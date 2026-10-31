@@ -1,107 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
-        <html lang="en"></html>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>LeetCode Tracker</title>
         <link rel="stylesheet" href="style.css">
         <script src="script.js" defer></script>
 
     </head>
     <body>
-        <ul id="problem-list">
+
+        <header>
+            <h1>LeetCode Tracker</h1>
+        </header>
+
+        <main>
+
+            <section class="revision-problems">
+                <h2>Due Today</h2>
+                
+                <ul id="problem-list">
+                    
+                </ul>
+            </section>
+
+            <section class="search-show-problem">
+
+                <h2>Search Problems</h2>
+
+                <search>
+                    <form class="search-form">
+                        <label for="search-input">Search Problem</label>
+                        <input name="q" type="text" id="search-input" placeholder="add a problem name or number" required>
+
+                        <button id="search-btn" type="submit">search</button>
+                    </form>
+                </search>
+
+                <ul class="search-list">
+                        
+                </ul>
+
+                <dialog class="search-problem-dialog">
+                    <h2 id="problem-name-no"></h2>
+                        <p id="search-problem-no">Problem No: <span></span></p>
+                        <p id="search-problem-name">Problem Name: <span></span></p>
+                        <p id="search-problem-difficulty">Problem Difficulty: <span></span></p>
+                        <p id="search-problem-url">Problem URL: <span><a target="_blank">Open problem on LeetCode</a></span></p>
+                        <p id="search-revisit-date">Revisit Date: </p>
+                        <p id="search-revisit-count">Revisit Counts: <span></span></p>
+
+                        <div class="confirm-or-cancel">
+                            <button id="search-revisit-open">Edit schedule</button>
+                            <button id="search-close">Close</button>
+                        </div>
+                </dialog>
+            </section>
+
             
-        </ul>
-
-        <dialog id="revision-dialog">
-            <h3>Revise Problem</h3>
-
-            <label for="revisit_date">Custom revisit date:</label>
-            <input type="date"  id="revisit_date">
-
-            <label for="remove_from_cycle">
-                <input type="checkbox" id="remove_from_cycle">
-                Remove from revisit cycle
-            </label>
-
-            <button class="confirm" id="confirm-revision">Confirm</button>
-            <button class="cancel" id="cancel-revision">Cancel</button>
-        </dialog>
-
-        <div class="search">
-            <label for="search_input">Search Problem</label>
-            <input type="text" id="search_input" placeholder="add a problem name or number">
-
-            <button id="search_btn" type="button">search</button>
-
-            <div class="search_results">
-
-            </div>
-        </div>
-
-        <dialog class="search-problem-dialog">
-            <p id="search-problem-no">Problem No: <span></span></p>
-            <p id="search-problem-name">Problem Name: <span></span></p>
-            <p id="search-problem-difficulty">Problem Difficulty: <span></span></p>
-            <p id="search-problem-url">Problem URL: <span><a target="_blank">Open problem on LeetCode</a></span></p>
-            <p id="search-revisit-count">Revisit Counts: <span></span></p>
-
-            <label for="search-revisit-date">Revisit date: </label>
-            <input type="date" id="search-revisit-date">
-            <p id="search-revisit-message"></p>
-
-            <label for="search-remove-from-cycle">
-                <input type="checkbox" id="search-remove-from-cycle">
-                Remove From Cycle
-            </label>
-            <p id="remove-from-cycle-message"></p>
-
-            <div class="confirm-or-cancel">
-                <button id="search-confirm">Confirm</button>
-                <button id="search-cancel">Cancel</button>
-            </div>
-        </dialog>
-
-        <div class="add-new-problem">
-            <label for="add-btn">Add New Problem: </label>
-            <button id="add-btn">Add New +</button>
-        </div>
-
-        <dialog class="add-problem-dialog">
-
-            <label for="new-problem-no">Problem No: </label>
-            <input type="number" id="new-problem-no" required>
-
-            <label for="new-problem-name">Problem Name: </label>
-            <input type="text" id="new-problem-name" required>
-
-            <label for="new-problem-difficulty">Problem Difficulty: </label>
-            <select id="new-problem-difficulty">
-                <option>Easy</option>
-                <option selected>Medium</option>
-                <option>Hard</option>
-                <option value="">select problem difficulty</option>
-            </select>
-
-            <label for="new-problem-status">Problem Status: </label>
-            <select id="new-problem-status">
-                <option selected>Solved</option>
-                <option>Unsolved</option>
-                <option>Attempted</option>
-                <option value="">Select problem status</option>
-            </select>
-
-            <label for="new-problem-url">Problem URL: </label>
-            <input type="text" id="new-problem-url">
-
-            <label for="new-problem-revisit-date">Revisit Date: </label>
-            <input type="date" id="new-problem-revisit-date">
-
-            <div class="confirm-or-cancel">
-                <button class="confirm" id="add-confirm" type="button">Confirm</button>
-                <button class="cancel" id="add-cancel" type="button">Cancel</button>
-
-            </div>
-        </dialog>
+            <section class="add-problem-section">
+                <h2>Add Problem</h2>
+                
+                <form id="add-problem-form">
+                    
+                    <label for="new-problem-no">Problem No: </label>
+                    <input type="number" id="new-problem-no" required name="problem_no" min="1">
+                    
+                    <label for="new-problem-name">Problem Name: </label>
+                    <input type="text" id="new-problem-name" required name="problem_name">
+                    
+                    <label for="new-problem-difficulty">Problem Difficulty: </label>
+                    <select id="new-problem-difficulty" name="problem_difficulty" required>
+                        <option value="" disabled selected hidden>select problem difficulty</option>
+                        <option>Easy</option>
+                        <option>Medium</option>
+                        <option>Hard</option>
+                    </select>
+                    
+                    <!-- for now only solved is allowed -->
+                    <label for="new-problem-status">Problem Status: </label>
+                    <select id="new-problem-status" name="problem_status">
+                        <option value="" disabled selected hidden>Select problem status</option>
+                            <option value="Solved">Solved</option>
+                        </select>
+                        
+                        <label for="new-problem-url">Problem URL: </label>
+                        <input type="url" id="new-problem-url" name="problem_url">
+                        
+                        <label for="new-problem-revisit-date">Revisit Date: </label>
+                        <input type="date" id="new-problem-revisit-date" name="revisit_date">
+                        
+                        <div class="confirm-or-cancel">
+                            <button class="confirm" type="submit">Confirm</button>
+                            <button class="cancel" type="reset">Clear</button>
+                        </div>
+                    </form>
+                </section>
+                
+                <dialog id="revision-dialog">
+                    <h2>Edit Schedule</h2>
+                    <p id="show-problem-name"><span></span></p>
+                    <form id="revision-form">
+    
+                        <label for="revisit-date">Custom revisit date:</label>
+                        <input name="revisit_date" type="date"  id="revisit-date">
+    
+                        <label for="remove-from-cycle">
+                            <input name="remove_from_cycle" type="checkbox" id="remove-from-cycle">
+                            Remove from revisit cycle
+                        </label>
+    
+                        <p class="edit-message" role="alert"></p>
+    
+                        <button class="confirm" id="confirm-revision" type="submit">Confirm</button>
+                        <button class="cancel" id="cancel-revision" type="button">Cancel</button>
+                    </form>
+                </dialog>
+            </main>
     </body>
 </html>
