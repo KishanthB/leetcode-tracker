@@ -101,6 +101,7 @@ revisionForm.addEventListener("submit", async (event) => {
         loadDueProblems();
         revisionDialog.close();
     } catch (error) {
+        console.error(error);
         showMessage(error);
     }
 });
@@ -170,6 +171,7 @@ async function loadDueProblems() {
         renderDueProblems(problems);
     }
     catch(error) {
+        console.error(error);
         showMessage(error.message);
     }
 }
@@ -179,130 +181,130 @@ loadDueProblems();
 
 // ==== END OF DUE PROBLEMS ==== 
 
-//when search button is clicked
-const searchBtn = document.getElementById("search_btn");
-searchBtn.addEventListener("click", async () => {
-    currentBtn = searchBtn;
-    currentBtn.disabled = true;
-    const input = document.getElementById("search_input");
-    getSearchProblems(input.value);
-});
+// ==== SEARCH PROBLEMS ====
 
-//to get search problems
-async function getSearchProblems(searchInput) {
-    try {
-        const safeInput = encodeURIComponent(searchInput);
-        const response = await fetch(`/api/problems/search?q=${safeInput}`);
+// selecting elements for search section
+const searchForm = document.getElementById("search-form");
+const searchInput = document.getElementById("search-input");
+const searchList = document.getElementById("search-list");
 
-        let result;
+// eleements for search problem dialog
+const searchProblemDialog = document.getElementById("search-problem-dialog");
+const searchProblemNo = document.getElementById("search-problem-no");
+const searchProblemName = document.getElementById("search-problem-name");
+const searchProblemDifficulty = document.getElementById("search-problem-difficulty");
+const searchProblemURL = document.getElementById("search-problem-url");
+const searchRevisitDate = document.getElementById("search-revisit-date");
+const searchRevisitCount = document.getElementById("search-revisit-count");
+const searchRevisitOpen = document.getElementById("search-revisit-open");
+const searchClose = document.getElementById("search-close");
+let selectedProblem = null;
 
-        if (!response.ok) {
-            result = await response.json();
-            throw new Error(result.message || "something went wrong");
-        } else {
-            result = await response.json();
-            renderSearchProblems(result);
-        }
-    }
+// to get search problems
+async function getSearchProblems(query) {
+    const safeInput = encodeURIComponent(query);
+    const response = await fetch(`/api/problems/search?q=${safeInput}`);
+        
+    let result = await response.json().catch(() => null);
 
-    finally {
-        if (currentBtn) currentBtn.disabled = false;
+    if (!response.ok) {
+        throw new Error(result?.message || `Server responded with status: ${response.status}`);
+    } else {
+        return result;
     }
 }
 
-const dialogConfirmBtn = document.querySelector("#search-confirm");
-const dialogCancelBtn = document.querySelector("#search-cancel");
-const container = document.querySelector(".search-problem-dialog");
-const problemRevisitDate = document.querySelector("#search-revisit-date");
-const problemRmvCheckBox = document.querySelector("#search-remove-from-cycle")
-
+// to open the search prolbem dialog
 function openProblemDialog(problem) {
-    container.showModal();
-    const problemNo = document.querySelector("#search-problem-no");
-    const problemName = document.querySelector("#search-problem-name");
-    const problemDiff = document.querySelector("#search-problem-difficulty");
-    const problemURL = document.querySelector("#search-problem-url");
-    const problemRevisitCount = document.querySelector("#search-revisit-count");
-    const problemRevisitMsg = document.querySelector("#search-revisit-message");
-    const problemRmvFrmCycleMsg = document.querySelector("#remove-from-cycle-message");
+    selectedProblem = problem;
 
-    currentProblemNo = problem.problem_no;
+    searchProblemDialog.showModal();
 
-    problemNo.querySelector("span").textContent = problem.problem_no;
-    problemName.querySelector("span").textContent = problem.problem_name;
-    problemDiff.querySelector("span").textContent = problem.problem_difficulty;
-    problemURL.querySelector("span a").href = problem.problem_url;
-    problemRevisitCount.querySelector("span").textContent = problem.revisit_count;
+    searchProblemNo.querySelector("span").textContent = problem.problem_no;
+    searchProblemName.querySelector("span").textContent = problem.problem_name;
+    searchProblemDifficulty.querySelector("span").textContent = problem.problem_difficulty;
+    searchRevisitCount.querySelector("span").textContent = problem.revisit_count;
 
-    if (problem.revisit_date === null) {
-        problemRevisitDate.value = "";
-        problemRevisitMsg.textContent = "No revisit date";
-        problemRmvCheckBox.disabled = true;
-        problemRmvFrmCycleMsg.textContent = "Already removed";
-    } else {
-        problemRevisitDate.value = problem.revisit_date;
-        problemRevisitMsg.textContent = "";
-        problemRmvCheckBox.disabled = false;
+    searchProblemURL.hidden = problem.problem_url === null;
+    if (problem.problem_url !== null) {
+        searchProblemURL.querySelector("span a").href = problem.problem_url;
     }
 
-    problemRmvCheckBox.checked = false;
+    if (problem.revisit_date !== null) {
+        searchRevisitDate.querySelector("span").textContent = problem.revisit_date;
+    } else {
+        searchRevisitDate.querySelector("span").textContent = "none";
+    }
+    
 }
 
-dialogConfirmBtn.addEventListener("click", async () => {
-    const finalRevisitDate = problemRevisitDate.value;
-    const finalCheckBoxState = problemRmvCheckBox.checked;
-
-    let patchObject;
-
-    if (finalCheckBoxState) {
-        patchObject = {remove_from_cycle: true};
-    } else if (finalRevisitDate !== "") {
-        patchObject = {revisit_date: finalRevisitDate};
-    } else {
-        patchObject = {};
-    }
-
-    const response = await updateProblem(currentProblemNo, patchObject);
-
-    container.close();
-    
-    if (response.ok) {
-        getSearchProblems(document.getElementById("search-input").value);
-    }
-
-});
-
-dialogCancelBtn.addEventListener("click", async () => {
-    container.close();
-});
-
+// to render the list of search problems in ul
 function renderSearchProblems(problems) {
-    const resultContainer = document.querySelector(".search_results");
-    resultContainer.replaceChildren();
+    searchList.replaceChildren();
+    
+    if (problems.length === 0) {
+        const searchMessage = document.createElement("p");
+        searchMessage.textContent = "No problems were found";
+        
+        const searchLi = document.createElement("li");
+        searchLi.append(searchMessage);
 
-    if (problems.length == 0) {
-        const message = "No Problems were found";
-        resultContainer.append(message);
+        searchList.append(searchLi);
+
         return;
     } 
 
     for (const problem of problems) {
         const problemBtn = document.createElement("button");
-        const problem_title = document.createElement("span");
+        const problemTitle = document.createElement("span");
+        const searchLi = document.createElement("li");
         
         problemBtn.type = "button";
-        problem_title.textContent = `${problem.problem_no}. ${problem.problem_name}`;
+        problemTitle.textContent = `${problem.problem_no}. ${problem.problem_name}`;
         
-        problemBtn.append(problem_title);
-        resultContainer.append(problemBtn);
+        problemBtn.append(problemTitle);
+        searchLi.append(problemBtn);
+        searchList.append(searchLi);
 
-        problemBtn.addEventListener("click", async () => {
+
+        problemBtn.addEventListener("click", () => {
             openProblemDialog(problem);
-
         });
     }
-
 }
+
+// to call the getSearchProblem and renderSearchProblem
+async function loadSearchProblems(query) {
+    try {
+        const problems = await getSearchProblems(query);
+        renderSearchProblems(problems);
+    } catch (error) {
+        console.error(error);
+        showMessage(error);
+    }
+}
+
+searchRevisitOpen.addEventListener("click", () => {
+    searchProblemDialog.close();
+    openRevisionDialog(selectedProblem);
+});
+
+searchClose.addEventListener("click", () => {
+    searchProblemDialog.close();
+});
+
+// when search form is submitted
+searchForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const query = searchInput.value.trim();
+    
+    if (query === "") return;
+
+    loadSearchProblems(query);
+})
+
+// ==== END OF SEARCH PROBLEM ====
 
 //add new problem 
 const addNewBtn = document.querySelector("#add-btn");

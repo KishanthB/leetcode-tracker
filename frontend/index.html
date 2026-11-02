@@ -31,7 +31,7 @@
                 <h2>Search Problems</h2>
 
                 <search>
-                    <form class="search-form">
+                    <form id="search-form">
                         <label for="search-input">Search Problem</label>
                         <input name="q" type="text" id="search-input" placeholder="add a problem name or number" required>
 
@@ -39,22 +39,22 @@
                     </form>
                 </search>
 
-                <ul class="search-list">
-                        
+                <ul id="search-list">
+                   
                 </ul>
 
-                <dialog class="search-problem-dialog">
+                <dialog id="search-problem-dialog">
                     <h2 id="problem-name-no"></h2>
                         <p id="search-problem-no">Problem No: <span></span></p>
                         <p id="search-problem-name">Problem Name: <span></span></p>
                         <p id="search-problem-difficulty">Problem Difficulty: <span></span></p>
-                        <p id="search-problem-url">Problem URL: <span><a target="_blank">Open problem on LeetCode</a></span></p>
-                        <p id="search-revisit-date">Revisit Date: </p>
+                        <p id="search-problem-url" hidden>Problem URL: <span><a target="_blank">Open problem on LeetCode</a></span></p>
+                        <p id="search-revisit-date">Revisit Date: <span></span></p>
                         <p id="search-revisit-count">Revisit Counts: <span></span></p>
 
                         <div class="confirm-or-cancel">
-                            <button id="search-revisit-open">Edit schedule</button>
-                            <button id="search-close">Close</button>
+                            <button id="search-revisit-open" type="button">Edit schedule</button>
+                            <button id="search-close" type="button">Close</button>
                         </div>
                 </dialog>
             </section>
