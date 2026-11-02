@@ -1,158 +1,183 @@
-//gloabal variables
-let dialog = null;
-let currentBtn = null;
-let currentProblemNo = null;
-let revisit_date_element = null;
-let remove_from_cycle_element = null;
+// ==== SHARED FUNCTIONS ====
 
-function isDigit(str) {
-    return /^[1-9]\d+$/.test(str);
-}
-
-async function getDueProblems() {
-    try {
-        const response = await fetch("/api/problems/due");
-        if (!response.ok) throw new Error(`Server returned: ${response.status}`);
-        const problems = await response.json();
-        renderDueProblems(problems);
-    } catch(error) {
-        showMessage(error.message);
-    }
-}
-
-//add the route or url parameter if patching on multiple routes
-async function updateProblem(problemNo, patchOjbect) {
-    try {
-        const response = await fetch(`/api/problems/${problemNo}`, {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(patchOjbect)
-        });
-
-        let result;
-
-        if (!response.ok) {
-            result = await response.json();
-            throw new Error(result.error || `server responded with status: ${response.status}`);
-        } else {
-            result = await response.json();
-            showMessage(result.success || "update successful!");
-        }
-
-    } finally {
-        if (currentBtn) currentBtn.disabled = false;
-    }
-}
-
-function checkChildExistence(parent, child) {
-    return parent.querySelector(child) !== null;
-}
-
+// to show messages (both success and error)
 function showMessage(message) {
     const msg = document.createElement("h3");
     msg.textContent = message;
     document.body.append(msg);
 }
 
-function renderDueProblems(problems) {
-    if (problems.length === 0) {
-        showMessage("No Problems Today! Good Job");
-        return;
-    }
-
-    let title;
-    const list = document.querySelector("#problem-list");
-    revisit_date_element = document.getElementById("revisit_date");
-    remove_from_cycle_element = document.getElementById("remove_from_cycle");
-
-    for (const problem of problems) {
-        const li = document.createElement("li");
-        const card = document.createElement("div");
-        const difficulty = document.createElement("span");
-        const button = document.createElement("button");
-        dialog = document.getElementById("revision-dialog");
-        
-        if (problem.problem_url === null) {
-            title = document.createElement("span");
-            title.textContent = `${problem.problem_no}. ${problem.problem_name}`;
-        } else {
-            title = document.createElement("a");
-            title.textContent = `${problem.problem_no}. ${problem.problem_name}`;
-            title.href = problem.problem_url;
-            title.target = "_blank";
-            title.rel = "noopener noreferrer";
-            title.style.textDecoration = "none";
-        }
-        
-        card.classList.add("card");
-        difficulty.classList.add(problem.problem_difficulty.toLowerCase());
-        difficulty.textContent = problem.problem_difficulty;
-        button.textContent = "Mark revised";
-        
-        card.append(title, difficulty, button);
-        li.append(card);
-        
-        list.append(li);
-        
-        button.addEventListener("click", async() => {
-            button.disabled = true;
-            currentBtn = button;
-            currentProblemNo = problem.problem_no;
-            dialog.showModal();
-        });
-    }
-
-    revisit_date_element.addEventListener("input", () => {
-        const revisit_date = revisit_date_element.value;
-        remove_from_cycle_element.disabled = revisit_date !== "";
-    });
-
-    remove_from_cycle_element.addEventListener("change", () => {
-        const remove_from_cycle = remove_from_cycle_element.checked;
-        revisit_date_element.disabled = remove_from_cycle;
-    });
-
-    const confirm_revision = document.getElementById("confirm-revision");
-    confirm_revision.addEventListener("click", async () => {
-        const finalDate = revisit_date_element.value;
-        const finalCheckSate = remove_from_cycle_element.checked;
-
-        let patchOjbect;
-                
-        if (finalDate === "" && finalCheckSate === false) {
-            patchOjbect = {}; // my flask server is made to handle this as user wants to allow the server to calculate the next revisit date
-        } else if (finalDate !== "" && finalCheckSate === false) {
-            patchOjbect = {revisit_date: finalDate};
-        } else {
-            patchOjbect = {remove_from_cycle: finalCheckSate};
-        }
-        try {
-            await updateProblem(currentProblemNo, patchOjbect);
-            dialog.close();
-        } catch(error) {
-            showMessage(error.message);
-        }
-    });
-
-    const cancel_revision = document.getElementById("cancel-revision");
-    cancel_revision.addEventListener("click", () => {
-        revisit_date_element.value = "";
-        remove_from_cycle_element.checked = false;
-
-        revisit_date_element.disabled = false;
-        remove_from_cycle_element.disabled = false;
-
-        if (currentBtn) currentBtn.disabled = false;
-
-        dialog.close();
-    });
-
+//to check for child existence
+function checkChildExistence(parent, child) {
+    return parent.querySelector(child) !== null;
 }
 
-//getting daily due problems
-getDueProblems();
+// to check for digits from 1 to infinity
+function isPosDigit(digit) {
+    posRegex = /^[1-9]\d*$/;
+    return posRegex.test(digit);
+}
+
+// ==== END OF SHARED FUNCTIONS ====
+
+// ==== REVISION DIALOG ====
+
+// selecting elements
+const revisionDialog = document.getElementById("revision-dialog");
+const revisionForm = document.getElementById("revision-form");
+const revisionTitle = document.getElementById("revision-title");
+const editMessage = document.getElementById("edit-message");
+const revisitDate = document.getElementById("revisit-date");
+const removeFromCycle = document.getElementById("remove-from-cycle");
+const cancelRevision = document.getElementById("cancel-revision");
+
+// to open the revision dialog box
+function openRevisionDialog(problem) {
+    revisionDialog.dataset.problemNo = problem.problem_no;
+    revisionTitle.textContent = problem.problem_name;
+
+    revisitDate.disabled = false;
+    removeFromCycle.disabled = false;
+
+    revisionForm.reset();
+
+    revisionDialog.showModal();
+}
+
+//add the route or url parameter if patching on multiple routes
+async function updateProblem(problemNo, patchOjbect) {
+    const response = await fetch(`/api/problems/${problemNo}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(patchOjbect)
+    });
+
+    let result = response.json().catch(() => null);
+
+    if (!response.ok) {
+        throw new Error(result?.message || `Server responded with status: ${response.status}`)
+    }
+
+    return result;
+}
+
+revisitDate.addEventListener("input", () => {
+    if (revisitDate.value !== "") {
+        removeFromCycle.disabled = true;
+        editMessage.textContent = "can't select both date and remove from cycle";
+    } else {
+        removeFromCycle.disabled = false;
+        editMessage.replaceChildren();
+    }
+});
+
+removeFromCycle.addEventListener("change", () => {
+    if (removeFromCycle.checked) {
+        revisitDate.disabled = true;
+        editMessage.textContent = "can't select both date and remove from cycle";
+    } else {
+        revisitDate.disabled = false;
+        editMessage.replaceChildren();
+    }
+});
+
+revisionForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    let patchOjbect;
+    if (removeFromCycle.checked) {
+        patchOjbect = {remove_from_cycle: true};
+    } else if (revisitDate.value !== "") {
+        patchOjbect = {revisit_date: revisitDate.value};
+    } else {
+        patchOjbect = {};
+    }
+
+    try {
+        const response = await updateProblem(revisionDialog.dataset.problemNo, patchOjbect);
+        showMessage(response);
+        loadDueProblems();
+        revisionDialog.close();
+    } catch (error) {
+        showMessage(error);
+    }
+});
+
+cancelRevision.addEventListener("click", () => {
+    revisionDialog.close();
+});
+
+// ==== END OF REVISION DIALOG ====
+
+// ==== DUE PROBLEMS ====
+
+//selecting elements
+const reviseList = document.getElementById("problem-list");
+const emptyNote = document.getElementById("empty-note");
+
+//to get due problems from server
+async function getDueProblems() {
+    const response = await fetch("/api/problems/due");
+    if (!response.ok) throw new Error(`Server returned: ${response.status}`);
+    const problems = await response.json();
+    return problems;
+}
+
+//to render the revise problems on the page
+function renderDueProblems(problems) {
+    emptyNote.hidden = problems.length > 0;
+
+    reviseList.replaceChildren();
+
+    for (const problem of problems) {
+        const item = document.createElement("li");
+        const difficulty = document.createElement("span");
+        const markRevised = document.createElement("button");
+        const problemTitle = `${problem.problem_no}. ${problem.problem_name}`;
+
+        let title;
+        if (problem.problem_url === null) {
+            title = document.createElement("span");
+            title.textContent = problemTitle;
+        } else {
+            title = document.createElement("a");
+            title.textContent = problemTitle;
+            title.href = problem.problem_url;
+            title.target = "_blank";
+            title.rel = "noopener noreferrer"
+        }
+
+        difficulty.textContent = problem.problem_difficulty;
+        markRevised.textContent = "mark revised";
+
+        item.append(title, difficulty, markRevised);
+
+        reviseList.append(item);
+
+        markRevised.addEventListener("click", () => {
+            openRevisionDialog(problem);
+        });
+
+    }
+}
+
+// to get the problems from getDueProblems and call the render function
+async function loadDueProblems() {
+    try {
+        const problems = await getDueProblems();
+        renderDueProblems(problems);
+    }
+    catch(error) {
+        showMessage(error.message);
+    }
+}
+
+//initial call 
+loadDueProblems();
+
+// ==== END OF DUE PROBLEMS ==== 
 
 //when search button is clicked
 const searchBtn = document.getElementById("search_btn");

@@ -18,6 +18,8 @@
 
             <section class="revision-problems">
                 <h2>Due Today</h2>
+
+                <p id="empty-note" hidden>No more problems Today! Good Job</p>
                 
                 <ul id="problem-list">
                     
@@ -97,9 +99,9 @@
                     </form>
                 </section>
                 
-                <dialog id="revision-dialog">
+                <dialog id="revision-dialog" data-problem-no="">
                     <h2>Edit Schedule</h2>
-                    <p id="show-problem-name"><span></span></p>
+                    <p id="revision-title"></p>
                     <form id="revision-form">
     
                         <label for="revisit-date">Custom revisit date:</label>
@@ -110,7 +112,7 @@
                             Remove from revisit cycle
                         </label>
     
-                        <p class="edit-message" role="alert"></p>
+                        <p id="edit-message" role="alert"></p>
     
                         <button class="confirm" id="confirm-revision" type="submit">Confirm</button>
                         <button class="cancel" id="cancel-revision" type="button">Cancel</button>
