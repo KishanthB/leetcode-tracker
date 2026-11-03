@@ -12,6 +12,7 @@
 
         <header>
             <h1>LeetCode Tracker</h1>
+            <div id="page-message" data-type=""></div>
         </header>
 
         <main>
@@ -82,42 +83,42 @@
                     <!-- for now only solved is allowed -->
                     <label for="new-problem-status">Problem Status: </label>
                     <select id="new-problem-status" name="problem_status">
-                        <option value="" disabled selected hidden>Select problem status</option>
-                            <option value="Solved">Solved</option>
-                        </select>
+                        <option value="Solved" selected>
+                            Solved</option>
+                    </select>
                         
-                        <label for="new-problem-url">Problem URL: </label>
-                        <input type="url" id="new-problem-url" name="problem_url">
+                    <label for="new-problem-url">Problem URL: </label>
+                    <input type="url" id="new-problem-url" name="problem_url">
                         
-                        <label for="new-problem-revisit-date">Revisit Date: </label>
-                        <input type="date" id="new-problem-revisit-date" name="revisit_date">
+                    <label for="new-problem-revisit-date">Revisit Date: </label>
+                    <input type="date" id="new-problem-revisit-date" name="revisit_date">
                         
-                        <div class="confirm-or-cancel">
-                            <button class="confirm" type="submit">Confirm</button>
-                            <button class="cancel" type="reset">Clear</button>
-                        </div>
-                    </form>
-                </section>
+                    <div class="confirm-or-cancel">
+                        <button id="confirm" type="submit">Confirm</button>
+                        <button id="add-clear" type="reset">Clear</button>
+                    </div>
+                </form>
+            </section>
                 
-                <dialog id="revision-dialog" data-problem-no="">
-                    <h2>Edit Schedule</h2>
-                    <p id="revision-title"></p>
-                    <form id="revision-form">
+            <dialog id="revision-dialog" data-problem-no="">
+                <h2>Edit Schedule</h2>
+                <p id="revision-title"></p>
+                <form id="revision-form">
     
-                        <label for="revisit-date">Custom revisit date:</label>
-                        <input name="revisit_date" type="date"  id="revisit-date">
+                    <label for="revisit-date">Custom revisit date:</label>
+                    <input name="revisit_date" type="date"  id="revisit-date">
     
-                        <label for="remove-from-cycle">
-                            <input name="remove_from_cycle" type="checkbox" id="remove-from-cycle">
-                            Remove from revisit cycle
-                        </label>
+                    <label for="remove-from-cycle">
+                        <input name="remove_from_cycle" type="checkbox" id="remove-from-cycle">
+                        Remove from revisit cycle
+                    </label>
     
-                        <p id="edit-message" role="alert"></p>
+                    <p id="edit-message" role="alert"></p>
     
-                        <button class="confirm" id="confirm-revision" type="submit">Confirm</button>
-                        <button class="cancel" id="cancel-revision" type="button">Cancel</button>
-                    </form>
-                </dialog>
-            </main>
+                    <button class="confirm" id="confirm-revision" type="submit">Confirm</button>
+                    <button class="cancel" id="cancel-revision" type="button">Cancel</button>
+                </form>
+            </dialog>
+        </main>
     </body>
 </html>

@@ -1,21 +1,25 @@
 // ==== SHARED FUNCTIONS ====
 
 // to show messages (both success and error)
-function showMessage(message) {
-    const msg = document.createElement("h3");
-    msg.textContent = message;
-    document.body.append(msg);
-}
+let messageTimer = null;
+function showMessage(message, status = "success") {
+    clearTimeout(messageTimer);
 
-//to check for child existence
-function checkChildExistence(parent, child) {
-    return parent.querySelector(child) !== null;
-}
+    const pageMessage = document.getElementById("page-message");
+    pageMessage.textContent = message;
 
-// to check for digits from 1 to infinity
-function isPosDigit(digit) {
-    posRegex = /^[1-9]\d*$/;
-    return posRegex.test(digit);
+    if (status === "error") {
+        pageMessage.setAttribute("role", "alert");
+        pageMessage.dataset.type = "error";
+    } else {
+        pageMessage.setAttribute("role", "status");
+        pageMessage.dataset.type = "success";
+    }
+
+    const delay = status === "error" ? 6000 : 4000;
+    messageTimer = setTimeout(() => {
+        pageMessage.textContent = "";
+    }, delay);
 }
 
 // ==== END OF SHARED FUNCTIONS ====
@@ -40,6 +44,7 @@ function openRevisionDialog(problem) {
     removeFromCycle.disabled = false;
 
     revisionForm.reset();
+    editMessage.textContent = "";
 
     revisionDialog.showModal();
 }
@@ -54,7 +59,7 @@ async function updateProblem(problemNo, patchOjbect) {
         body: JSON.stringify(patchOjbect)
     });
 
-    let result = response.json().catch(() => null);
+    let result = await response.json().catch(() => null);
 
     if (!response.ok) {
         throw new Error(result?.message || `Server responded with status: ${response.status}`)
@@ -97,12 +102,12 @@ revisionForm.addEventListener("submit", async (event) => {
 
     try {
         const response = await updateProblem(revisionDialog.dataset.problemNo, patchOjbect);
-        showMessage(response);
         loadDueProblems();
         revisionDialog.close();
+        showMessage(response.message);
     } catch (error) {
-        console.error(error);
-        showMessage(error);
+        console.error(error.message);
+        editMessage.textContent = error.message;
     }
 });
 
@@ -171,8 +176,8 @@ async function loadDueProblems() {
         renderDueProblems(problems);
     }
     catch(error) {
-        console.error(error);
-        showMessage(error.message);
+        console.error(error.message);
+        showMessage(error.message, "error");
     }
 }
 
@@ -279,8 +284,8 @@ async function loadSearchProblems(query) {
         const problems = await getSearchProblems(query);
         renderSearchProblems(problems);
     } catch (error) {
-        console.error(error);
-        showMessage(error);
+        console.error(error.message);
+        showMessage(error.message, "error");
     }
 }
 
@@ -306,112 +311,49 @@ searchForm.addEventListener("submit", (event) => {
 
 // ==== END OF SEARCH PROBLEM ====
 
-//add new problem 
-const addNewBtn = document.querySelector("#add-btn");
-const newProblemContainer = document.querySelector(".add-problem-dialog");
+// ==== ADD NEW PROBLEM ====
 
-addNewBtn.addEventListener("click", () => {
-    newProblemContainer.showModal();
-});
+// selecting elements for add problem section
+const addProblemForm = document.getElementById("add-problem-form");
 
-const newProblemConfirm = document.querySelector("#add-confirm");
-newProblemConfirm.addEventListener("click", async () => {
-    const problemData = getNewProblemData();
+async function addNewProblem(problemOject) {
+    const response = await fetch("/api/problems", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(problemOject)
+    });
 
-    if (!problemData) return;
+    const result = await response.json().catch(() => null);
 
-    await addNewProblem(problemData);
-});
-
-const newProblemCancel = document.querySelector("#add-cancel");
-newProblemCancel.addEventListener("click", () => {
-    newProblemNo.value = "";
-    newProblemName.value = "";
-    newProblemDifficulty.value = "";
-    newProblemStatus.value = "";
-    newProblemURL.value = "";
-    newRevisitDate.value = "";
-
-    newProblemContainer.close();
-});
-
-const newProblemNo = document.querySelector("#new-problem-no");
-const newProblemName = document.querySelector("#new-problem-name");
-const newProblemDifficulty = document.querySelector("#new-problem-difficulty");
-const newProblemStatus = document.querySelector("#new-problem-status");
-const newProblemURL = document.querySelector("#new-problem-url");
-const newRevisitDate = document.querySelector("#new-problem-revisit-date");
-
-
-//to get new problem data 
-function getNewProblemData() {
-    const finalNewProbNo = newProblemNo.value;
-    const finalNewProbName = newProblemName.value;
-    const finalNewProbDiff = newProblemDifficulty.value;
-    const finalNewProbStatus = newProblemStatus.value;
-    const finalNewProbURL = newProblemURL.value;
-    const finalNewProbDate = newRevisitDate.value;
-
-    let msg;
-
-    if (!isDigit(finalNewProbNo)) {
-        msg = {
-            message: "problem no should be a valid number starting from 1"
-        };
-        showMessage(msg);
-        return;
+    if (!response.ok) {
+        throw new Error(result?.message || `Server responded with status: ${response.status}`);
     }
 
-    if (!finalNewProbName) {
-        msg = {
-            message: "problem name cannot be empty"
-        };
-        showMessage(msg);
-        return;
-    }
-
-    const problemData = {
-        problem_no: finalNewProbNo,
-        problem_name: finalNewProbName,
-        problem_difficulty: finalNewProbDiff,
-        problem_status: finalNewProbStatus,
-        problem_url: finalNewProbURL,
-        revisit_date: finalNewProbDate
-    };
-
-    return problemData;
+    return result;
 }
 
-//to add new problem to the database
-async function addNewProblem(problemData) {
+async function submitNewProblems(problemObject) {
     try {
-        const response = await fetch("/api/problems", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(problemData)
-        });
-
-        const data = await response.json();
-
-        showMessage(data);
-
-        if (!response.ok) return;
-
-        newProblemNo.value = "";
-        newProblemName.value = "";
-        newProblemDifficulty.value = "";
-        newProblemStatus.value = "";
-        newProblemURL.value = "";
-        newRevisitDate.value = "";
-
-        newProblemContainer.close();
-
-    } catch {
-        let msg = {
-            message: "Unnable to connect to the server"
-        };
-        showMessage(msg);
+        const result = await addNewProblem(problemObject);
+        showMessage(result.message);
+        addProblemForm.reset();
+    } catch (error){
+        console.error(error.message);
+        showMessage(error.message, "error");
     }
 }
+
+addProblemForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(addProblemForm);
+    const problemObject = Object.fromEntries(formData);
+
+    problemObject.problem_name = problemObject.problem_name.trim();
+
+    submitNewProblems(problemObject);
+});
+
+// ==== END OF ADD NEW PROBLEM ====
