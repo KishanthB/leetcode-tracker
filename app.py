@@ -64,6 +64,9 @@ def build_problem_dict(problem):
     }
     return problem_dict
 
+def message_response(message, status):
+    return jsonify({"message": message}), status
+
 @app.route('/')
 def home():
     return app.send_static_file("index.html")
@@ -128,19 +131,30 @@ def handle_problems():
 
         #checking whether data even came or not
         if new_problem is None:
-            return jsonify({"error": "request body must be valid JSON"}), 400
+            return message_response("request body must be valid JSON", 400)
 
         #handling error cases for problem_no in database
 
-        if not "problem_no" in new_problem:
-            return jsonify({"error": "problem number can't be empty"}), 400
-        elif new_problem["problem_no"] < 1:
-            return jsonify({"error": "problem number can't be negative or zero"}), 400
+        try:
+            problem_no = int(new_problem.get("problem_no"))
+        except (ValueError, TypeError):
+            return message_response("Invalid problem number", 400)
+
+        if problem_no < 1:
+            return message_response("Problem number must be positive", 400)
 
         #handling error cases for problem_name in database
 
         if not "problem_name" in new_problem:
             return jsonify({"error": "problem name can't be empty"}), 400
+
+        if not isinstance(new_problem["problem_name"], str):
+            return message_response("Problem name must be a string", 400)
+
+        problem_name = new_problem["problem_name"].strip()
+
+        if not problem_name:
+            return message_response("Problem name can't be empty", 400)     
 
         #handling error cases for problem_difficutly in database
 
@@ -152,15 +166,25 @@ def handle_problems():
         #hard-coding problem status to be stricty "Solved" for current MVP
 
         new_problem["problem_status"] = "Solved"
+
+        #handling error cases for url properly
+        if not new_problem.get("problem_url"):
+            return message_response("Problem url can't be empty", 400)
+
+        problem_url = new_problem["problem_url"].strip() or None
+
+        if not problem_url:
+            return message_response("Problem url can't be empty", 400)
         
         #handling error cases for revisit date properly
-        if "revisit_date" in new_problem:
+
+        if not new_problem.get("revisit_date"):
+            revisit_date = compute_revisit_date(new_problem["problem_difficulty"])
+        else:
             try:
                 revisit_date = parse_revisit_date(new_problem["revisit_date"])
             except ValueError as e:
-                return jsonify({"error": str(e)}), 400
-        else:
-            revisit_date = compute_revisit_date(new_problem["problem_difficulty"])
+                return message_response(str(e), 400)
 
         new_problem["revisit_date"] = revisit_date
 
@@ -187,10 +211,10 @@ def handle_problems():
                          revisit_date,
                          new_problem.get("problem_url")))
             conn.commit()
-            return jsonify(new_problem), 201
+            return message_response("Problem added", 201)
         except psycopg2.errors.UniqueViolation:
             conn.rollback()
-            return jsonify({"error": "problem_no already exists"}), 409
+            return message_response("Problem already exsits", 409)
         finally:
             conn.close()
 
@@ -202,19 +226,8 @@ def handle_problems():
 
             cur.execute('SELECT * FROM problems;')
             rows = cur.fetchall()
-            dict_problems = []
-
-            for row in rows:
-                problem = {  # we can do this since db schema rarely change once created.
-                    "problem_no": row[0],
-                    "problem_name": row[1],
-                    "problem_difficulty": row[2],
-                    "problem_status": row[3],
-                    "revisit_date": row[4],
-                    "problem_url": row[5]
-                }
-                dict_problems.append(problem)
-
+            dict_problems = [build_problem_dict(row) for row in rows]
+            
             return jsonify(dict_problems)
         finally:
             conn.close()
@@ -279,11 +292,12 @@ def revise_problem(problem_no):
             "message": "Bad Requesy, cannot set the revisite date while also removing it from the revision cycle"
         }), 400
 
-    if "revisit_date" in body:
+    revisit_date = body.get("revisit_date")
+    if revisit_date:
         try:
-            revisit_date = parse_revisit_date(body["revisit_date"])
+            revisit_date = parse_revisit_date(revisit_date)
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return message_response(str(e), 400)
 
     conn = get_connection()
 
@@ -315,7 +329,7 @@ def revise_problem(problem_no):
 
         difficulty, revisit_count = row
 
-        if "revisit_date" not in body:
+        if not revisit_date:
             revisit_date = compute_revisit_date(difficulty, revisit_count)
 
         cur.execute("""
