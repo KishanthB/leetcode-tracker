@@ -17,7 +17,7 @@
 
         <main>
 
-            <section class="revision-problems">
+            <section class="card revision-problems">
                 <h2>Due Today</h2>
 
                 <p id="empty-note" hidden>No more problems Today! Good Job</p>
@@ -27,7 +27,7 @@
                 </ul>
             </section>
 
-            <section class="search-show-problem">
+            <section class="card search-show-problem">
 
                 <h2>Search Problems</h2>
 
@@ -61,7 +61,7 @@
             </section>
 
             
-            <section class="add-problem-section">
+            <section class="card add-problem-section">
                 <h2>Add Problem</h2>
                 
                 <form id="add-problem-form">
@@ -93,8 +93,8 @@
                     <label for="new-problem-revisit-date">Revisit Date: </label>
                     <input type="date" id="new-problem-revisit-date" name="revisit_date">
                         
-                    <div class="confirm-or-cancel">
-                        <button id="confirm" type="submit">Confirm</button>
+                    <div class="add-confirm-or-cancel">
+                        <button id="add-confirm" type="submit">Confirm</button>
                         <button id="add-clear" type="reset">Clear</button>
                     </div>
                 </form>
@@ -104,19 +104,20 @@
                 <h2>Edit Schedule</h2>
                 <p id="revision-title"></p>
                 <form id="revision-form">
-    
-                    <label for="revisit-date">Custom revisit date:</label>
-                    <input name="revisit_date" type="date"  id="revisit-date">
-    
-                    <label for="remove-from-cycle">
+                    <div class="date-field">
+                        <label for="revisit-date">Custom revisit date:</label>
+                        <input name="revisit_date" type="date"  id="revisit-date">
+                    </div>
+                    <label class="checkbox-field" for="remove-from-cycle">
                         <input name="remove_from_cycle" type="checkbox" id="remove-from-cycle">
                         Remove from revisit cycle
                     </label>
     
                     <p id="edit-message" role="alert"></p>
-    
-                    <button class="confirm" id="confirm-revision" type="submit">Confirm</button>
-                    <button class="cancel" id="cancel-revision" type="button">Cancel</button>
+                    <div class="revision-confirm-or-cancel">
+                        <button class="confirm" id="confirm-revision" type="submit">Confirm</button>
+                        <button class="cancel" id="cancel-revision" type="button">Cancel</button>
+                    </div>
                 </form>
             </dialog>
         </main>

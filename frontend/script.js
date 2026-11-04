@@ -138,8 +138,11 @@ function renderDueProblems(problems) {
     reviseList.replaceChildren();
 
     for (const problem of problems) {
+        const problemInfo = document.createElement("div");
+        problemInfo.classList.add("problem-info");
         const item = document.createElement("li");
         const difficulty = document.createElement("span");
+        difficulty.classList.add("difficulty");
         const markRevised = document.createElement("button");
         const problemTitle = `${problem.problem_no}. ${problem.problem_name}`;
 
@@ -158,7 +161,8 @@ function renderDueProblems(problems) {
         difficulty.textContent = problem.problem_difficulty;
         markRevised.textContent = "mark revised";
 
-        item.append(title, difficulty, markRevised);
+        problemInfo.append(title, difficulty);
+        item.append(problemInfo, markRevised);
 
         reviseList.append(item);
 
