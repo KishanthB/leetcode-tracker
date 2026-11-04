@@ -80,17 +80,11 @@ def search_problems():
         raw_q = request.args.get("q", "").strip()
 
         if not raw_q:
-            return jsonify({
-                "error": "Bad Request",
-                "message": "search query cannot be empty or just whitespaces."
-            }), 400
-
+            return message_response("search query cannot be empty or just whitespaces.", 400)
+        
         if raw_q.isdigit():
             if int(raw_q) <= 0:
-                return jsonify({
-                    "error": "Bad Request",
-                    "message": "problem number cannot be negative or zero"
-                }), 400
+                return message_response("problem number cannot be negative or zero", 400)
             else:
                 q = int(raw_q)
         else:
@@ -130,8 +124,8 @@ def handle_problems():
         new_problem = request.get_json(silent = True)
 
         #checking whether data even came or not
-        if new_problem is None:
-            return message_response("request body must be valid JSON", 400)
+        if not isinstance(new_problem, dict):
+            return message_response("request body must be a JSON object", 400)
 
         #handling error cases for problem_no in database
 
@@ -146,7 +140,7 @@ def handle_problems():
         #handling error cases for problem_name in database
 
         if not "problem_name" in new_problem:
-            return jsonify({"error": "problem name can't be empty"}), 400
+            return message_response("problem name can't be empty", 400)
 
         if not isinstance(new_problem["problem_name"], str):
             return message_response("Problem name must be a string", 400)
@@ -159,34 +153,34 @@ def handle_problems():
         #handling error cases for problem_difficutly in database
 
         if not "problem_difficulty" in new_problem:
-            return jsonify({"error": "problem difficulty can't be empty"}), 400
+            return message_response("problem difficulty can't be empty", 400)
         elif new_problem["problem_difficulty"] not in ("Easy", "Medium", "Hard"):
-            return jsonify({"error": "wrong type of difficulty"}), 400
+            return message_response("wrong type of difficulty", 400)
+
+        problem_difficulty = new_problem["problem_difficulty"]
 
         #hard-coding problem status to be stricty "Solved" for current MVP
 
-        new_problem["problem_status"] = "Solved"
+        problem_status = "Solved"
 
         #handling error cases for url properly
-        if not new_problem.get("problem_url"):
-            return message_response("Problem url can't be empty", 400)
+        problem_url = new_problem.get("problem_url")
 
-        problem_url = new_problem["problem_url"].strip() or None
+        if not problem_url and not isinstance(problem_url, str):
+            return message_response("Invalid problem url", 400)
 
-        if not problem_url:
-            return message_response("Problem url can't be empty", 400)
+        problem_url = problem_url.strip() or None
         
         #handling error cases for revisit date properly
+        revisit_date = new_problem.get("revisit_date")
 
-        if not new_problem.get("revisit_date"):
-            revisit_date = compute_revisit_date(new_problem["problem_difficulty"])
+        if not revisit_date:
+            revisit_date = compute_revisit_date(problem_difficulty)
         else:
             try:
-                revisit_date = parse_revisit_date(new_problem["revisit_date"])
+                revisit_date = parse_revisit_date(revisit_date)
             except ValueError as e:
                 return message_response(str(e), 400)
-
-        new_problem["revisit_date"] = revisit_date
 
         conn = get_connection()
 
@@ -204,17 +198,17 @@ def handle_problems():
                         )
                          VALUES (%s, %s, %s, %s, %s, %s);
                         """, 
-                        (new_problem["problem_no"],
-                         new_problem["problem_name"], 
-                         new_problem["problem_difficulty"], 
-                         new_problem["problem_status"],
+                        (problem_no,
+                         problem_name, 
+                         problem_difficulty, 
+                         problem_status,
                          revisit_date,
-                         new_problem.get("problem_url")))
+                         problem_url))
             conn.commit()
             return message_response("Problem added", 201)
         except psycopg2.errors.UniqueViolation:
             conn.rollback()
-            return message_response("Problem already exsits", 409)
+            return message_response("Problem already exists", 409)
         finally:
             conn.close()
 
@@ -273,24 +267,16 @@ def due_problems():
 @app.route("/api/problems/<int:problem_no>", methods = ["PATCH"])
 def revise_problem(problem_no):
 
-    if not request.is_json:
-        return jsonify({"error": "Invalid Header, Please check the content type"}), 415
-
     body = request.get_json(silent = True)
 
-    if body is None:
-        return jsonify({"error": "Bad Request, Invalid JSON body"}), 400
-
     if not isinstance(body, dict):
-        return jsonify({"error": "Bad Request, need JSON"}), 400
+        return message_response("request body must be a JSON object", 400)
 
     if "remove_from_cycle" in body and not isinstance(body["remove_from_cycle"], bool):
-        return jsonify({"error": "Bad Request, remove from cycle should be a boolean"}), 400
+        return message_response("Bad Request, remove from cycle should be a boolean", 400)
 
     if "remove_from_cycle" in body and "revisit_date" in body:
-        return jsonify({
-            "message": "Bad Requesy, cannot set the revisite date while also removing it from the revision cycle"
-        }), 400
+        return message_response("Bad Request, cannot set the revisit date while also removing it from the revision cycle", 400)
 
     revisit_date = body.get("revisit_date")
     if revisit_date:
@@ -313,10 +299,10 @@ def revise_problem(problem_no):
             conn.commit()
 
             if row is None:
-                return jsonify({"error": f"can't find the problem no '{problem_no}'"}), 404
+                return message_response(f"can't find the problem no '{problem_no}'", 404)
 
             revisit_count = row[0]
-            return jsonify({"success": f"problem no '{problem_no}' is successfully removed from the revisit cycle, revisit counts: {revisit_count}"}), 200
+            return message_response(f"problem no '{problem_no}' is successfully removed from the revisit cycle, revisit counts: {revisit_count}", 200)
 
         cur.execute("""
                 UPDATE problems SET revisit_count = revisit_count + 1
@@ -325,7 +311,7 @@ def revise_problem(problem_no):
         row = cur.fetchone()
 
         if row is None:
-            return jsonify({"error": f"can't find the problem no '{problem_no}'"}), 404
+            return message_response(f"can't find the problem no '{problem_no}'", 404)
 
         difficulty, revisit_count = row
 
@@ -337,10 +323,14 @@ def revise_problem(problem_no):
                 WHERE problem_no = %s;""", (revisit_date, problem_no))
         conn.commit()
         
-        return jsonify({"success": f"problem no '{problem_no}' is successfully set to revisit on date: '{revisit_date}', current revisit counts: {revisit_count}"}), 200      
+        return message_response(f"problem no '{problem_no}' is successfully set to revisit on date: '{revisit_date}', current revisit counts: {revisit_count}", 200)     
         
     finally:
         conn.close()
+
+@app.errorhandler(500)
+def server_error(error):
+    return message_response("Internal server error", 500)
 
 if __name__ == '__main__':
     app.run(debug = True)
